@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mirror Globe</title>
+  <title>Minimalistyczny glob</title>
   <style>
     :root {
       color-scheme: light;
@@ -586,6 +586,84 @@
       "romania:brasov": "Brașov",
       "hungary:pecs": "Pécs",
       "hungary:gyor": "Győr"
+    };
+
+    const polishCityNames = {
+      "poland:warsaw": "Warszawa",
+      "poland:krakow": "Kraków",
+      "poland:lodz": "Łódź",
+      "poland:wroclaw": "Wrocław",
+      "poland:poznan": "Poznań",
+      "poland:gdansk": "Gdańsk",
+      "poland:bialystok": "Białystok",
+      "poland:czestochowa": "Częstochowa",
+      "poland:torun": "Toruń",
+      "poland:plock": "Płock",
+      "poland:gorzow wielkopolski": "Gorzów Wielkopolski",
+      "poland:zielona gora": "Zielona Góra",
+      "poland:nowy sacz": "Nowy Sącz",
+      "poland:jelenia gora": "Jelenia Góra",
+      "ukraine:kyiv": "Kijów",
+      "ukraine:kiev": "Kijów",
+      "ukraine:lviv": "Lwów",
+      "ukraine:kharkiv": "Charków",
+      "ukraine:odesa": "Odessa",
+      "ukraine:dnipro": "Dniepr",
+      "ukraine:donetsk": "Donieck",
+      "ukraine:zaporizhzhia": "Zaporoże",
+      "ukraine:kryvyi rih": "Krzywy Róg",
+      "belarus:minsk": "Mińsk",
+      "belarus:gomel": "Homel",
+      "belarus:homel": "Homel",
+      "belarus:mogilev": "Mohylew",
+      "belarus:mahilyow": "Mohylew",
+      "belarus:vitebsk": "Witebsk",
+      "belarus:hrodna": "Grodno",
+      "belarus:grodno": "Grodno",
+      "belarus:brest": "Brześć",
+      "lithuania:vilnius": "Wilno",
+      "lithuania:kaunas": "Kowno",
+      "lithuania:klaipeda": "Kłajpeda",
+      "czechia:prague": "Praga",
+      "czechia:praha": "Praga",
+      "czechia:brno": "Brno",
+      "czechia:ostrava": "Ostrawa",
+      "czechia:plzen": "Pilzno",
+      "slovakia:bratislava": "Bratysława",
+      "slovakia:kosice": "Koszyce",
+      "germany:munich": "Monachium",
+      "germany:munchen": "Monachium",
+      "germany:cologne": "Kolonia",
+      "germany:koln": "Kolonia",
+      "germany:nuremberg": "Norymberga",
+      "austria:vienna": "Wiedeń",
+      "austria:wien": "Wiedeń",
+      "italy:rome": "Rzym",
+      "italy:roma": "Rzym",
+      "italy:milan": "Mediolan",
+      "italy:milano": "Mediolan",
+      "italy:naples": "Neapol",
+      "italy:napoli": "Neapol",
+      "italy:turin": "Turyn",
+      "italy:torino": "Turyn",
+      "italy:venice": "Wenecja",
+      "italy:venezia": "Wenecja",
+      "france:paris": "Paryż",
+      "france:marseille": "Marsylia",
+      "spain:seville": "Sewilla",
+      "spain:sevilla": "Sewilla",
+      "greece:athens": "Ateny",
+      "romania:bucharest": "Bukareszt",
+      "hungary:budapest": "Budapeszt",
+      "russia:moscow": "Moskwa",
+      "russia:saint petersburg": "Petersburg",
+      "russia:st petersburg": "Petersburg",
+      "united kingdom:london": "Londyn",
+      "united states:new york": "Nowy Jork",
+      "united states:washington": "Waszyngton",
+      "egypt:cairo": "Kair",
+      "china:beijing": "Pekin",
+      "japan:tokyo": "Tokio"
     };
 
     const state = {
@@ -1335,16 +1413,27 @@
     }
 
     function searchableCityText(city) {
-      return withPolishAliases(`${city.name} ${displayCityName(city)} ${city.asciiName || ""} ${city.aliases || ""} ${city.country}`);
+      return withPolishAliases(`${city.name} ${displayCityName(city)} ${polishCityName(city) || ""} ${city.asciiName || ""} ${city.aliases || ""} ${city.country}`);
     }
 
     function displayCityName(city) {
       const country = normalize(city.country);
       const name = normalize(city.name);
       const ascii = normalize(city.asciiName || city.name);
+      if (state.language === "pl") {
+        const polishName = polishCityNames[`${country}:${name}`] || polishCityNames[`${country}:${ascii}`];
+        if (polishName) return polishName;
+      }
       return cityNameCorrections[`${country}:${name}`] ||
         cityNameCorrections[`${country}:${ascii}`] ||
         city.name;
+    }
+
+    function polishCityName(city) {
+      const country = normalize(city.country);
+      const name = normalize(city.name);
+      const ascii = normalize(city.asciiName || city.name);
+      return polishCityNames[`${country}:${name}`] || polishCityNames[`${country}:${ascii}`] || "";
     }
 
     function searchableCountryText(country) {

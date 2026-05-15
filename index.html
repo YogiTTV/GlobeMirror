@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minimalistyczny glob</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f4f2;
+      --ink: #202221;
+      --muted: rgba(32, 34, 33, 0.62);
+      --line: rgba(32, 34, 33, 0.14);
+      --panel: rgba(255, 255, 255, 0.72);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --city: #4b4b4b;
+      --border: rgba(255, 255, 255, 0.5);
+      --red: #ff2f2f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    #globe {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.9), transparent 34rem),
+        #f4f4f2;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: minmax(220px, 430px) auto;
+      gap: 12px;
+      align-items: start;
+      pointer-events: none;
+    }
+
+    .glass {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.32);
+      pointer-events: auto;
+    }
+
+    .search {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 6px;
+      padding: 7px;
+    }
+
+    input,
+    button {
+      height: 38px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+
+    input {
+      min-width: 0;
+      padding: 0 10px;
+    }
+
+    input::placeholder {
+      color: rgba(245, 247, 242, 0.46);
+    }
+
+    input:focus,
+    button:focus-visible {
+      border-color: rgba(255, 255, 255, 0.32);
+    }
+
+    button {
+      min-width: 38px;
+      padding: 0 10px;
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    button:hover,
+    button.is-active {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .lang {
+      min-width: 48px;
+      font-weight: 700;
+    }
+
+    .suggestions {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      display: none;
+      max-height: 250px;
+      overflow: auto;
+      padding: 6px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .suggestions.is-open {
+      display: grid;
+      gap: 3px;
+    }
+
+    .suggestion {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 9px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+
+    .suggestion:hover {
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .suggestion small {
+      color: var(--muted);
+    }
+
+    .mini {
+      justify-self: end;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .chip b {
+      color: var(--ink);
+      font-weight: 720;
+    }
+
+    .toggle {
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--city);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.62);
+    }
+
+    .dot.red {
+      background: var(--red);
+      box-shadow: 0 0 14px rgba(255, 47, 47, 0.72);
+    }
+
+    .antipode {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      z-index: 4;
+      width: min(430px, calc(100vw - 32px));
+      padding: 14px 15px;
+      color: var(--muted);
+      line-height: 1.45;
+      display: none;
+    }
+
+    .antipode.is-visible {
+      display: block;
+    }
+
+    .antipode h2 {
+      margin: 0 0 6px;
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+
+    .antipode p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .antipode-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .antipode-head h2 {
+      margin: 0;
+    }
+
+    .clear-antipode {
+      width: auto;
+      height: 30px;
+      padding: 0 9px;
+      border-color: var(--line);
+      background: rgba(255, 47, 47, 0.08);
+      color: var(--red);
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .status {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 4;
+      max-width: min(520px, calc(100vw - 32px));
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .tooltip {
+      position: fixed;
+      z-index: 8;
+      max-width: 260px;
+      padding: 8px 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--ink);
+      font-size: 0.84rem;
+      line-height: 1.35;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(12px, 12px);
+      transition: opacity 0.12s ease;
+    }
+
+    .tooltip.is-visible {
+      opacity: 1;
+    }
+
+    .tooltip small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: 1fr;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+      }
+
+      .mini {
+        justify-self: start;
+      }
+
+      .chip.optional {
+        display: none;
+      }
+
+      .antipode,
+      .status {
+        left: 5px;
+        right: 5px;
+        bottom: 5px;
+      }
+
+      .status {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="globe" aria-label="Interactive 3D globe"></main>
+
+  <section class="topbar" aria-label="Globe controls">
+    <div class="search glass">
+      <input id="search" type="search" autocomplete="off" />
+      <button id="home" type="button" aria-label="Reset view" title="Reset">⌂</button>
+      <button id="language" class="lang" type="button" aria-label="Change language">EN</button>
+      <div id="suggestions" class="suggestions" role="listbox"></div>
+    </div>
+
+    <div class="mini">
+      <div class="chip glass"><span class="dot"></span><b id="citiesCount">...</b><span id="citiesLabel"></span></div>
+      <button id="toggleLabels" class="chip toggle glass" type="button"><span id="labelsToggleText"></span></button>
+      <button id="toggleRotation" class="chip toggle glass is-active" type="button"><span id="rotationToggleText"></span></button>
+      <div class="chip glass optional"><span class="dot red"></span><span id="antipodeHint"></span></div>
+    </div>
+  </section>
+
+  <section id="antipodePanel" class="antipode glass" aria-live="polite"></section>
+  <div id="status" class="status glass"></div>
+  <div id="tooltip" class="tooltip"></div>
+
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/globe.gl@2.32.1/dist/globe.gl.min.js"></script>
+  <script>
+    const COUNTRIES_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+    const GEONAMES_CITIES_URL = "https://download.geonames.org/export/dump/cities5000.zip";
+    const CITIES_JSON_URL = "https://cdn.jsdelivr.net/npm/cities.json@1.1.50/cities.json";
+    const NATURAL_EARTH_CITIES_URL = "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_10m_populated_places.geojson";
+
+    const text = {
+      pl: {
+        htmlLang: "pl",
+        title: "Minimalistyczny glob",
+        search: "Szukaj miasta lub państwa...",
+        cities: "miast",
+        labelsOn: "Nazwy: auto",
+        labelsOff: "Nazwy: ukryte",
+        rotationOn: "Obrót: tak",
+        rotationOff: "Obrót: nie",
+        antipodeHint: "Kliknij glob, aby zobaczyć antypod",
+        loading: "Ładowanie granic i większej bazy miast...",
+        ready: (countries, cities, source) => `Gotowe. Granice: ${countries}. Miasta: ${cities}. Źródło: ${source}.`,
+        fallback: "Nie udało się pobrać dużej bazy GeoNames, używam lżejszej warstwy Natural Earth.",
+        noData: "Brak danych",
+        active: "Widok",
+        countryMeta: "państwo / terytorium",
+        cityPopulation: "Populacja",
+        oppositeTitle: "Druga strona globu",
+        clearAntipode: "Usuń",
+        clicked: "Kliknięto",
+        antipode: "Antypod",
+        oppositeCountry: "Państwo po drugiej stronie",
+        nearestCity: "Najbliższe miasto",
+        distance: "odległość",
+        ocean: "ocean lub obszar bez państwa w danych mapowych",
+        unknownPlace: "nieznane miejsce",
+        coords: "współrzędne",
+        geoNames: "GeoNames cities5000",
+        citiesJson: "cities.json / GeoNames",
+        naturalEarth: "Natural Earth populated places",
+        fallbackSource: "wbudowana lista zapasowa"
+      },
+      en: {
+        htmlLang: "en",
+        title: "Minimal globe",
+        search: "Search a city or country...",
+        cities: "cities",
+        labelsOn: "Labels: auto",
+        labelsOff: "Labels: hidden",
+        rotationOn: "Rotation: on",
+        rotationOff: "Rotation: off",
+        antipodeHint: "Click the globe to reveal the antipode",
+        loading: "Loading borders and a larger city dataset...",
+        ready: (countries, cities, source) => `Ready. Borders: ${countries}. Cities: ${cities}. Source: ${source}.`,
+        fallback: "The large GeoNames dataset could not be loaded, using the lighter Natural Earth layer.",
+        noData: "No data",
+        active: "View",
+        countryMeta: "country / territory",
+        cityPopulation: "Population",
+        oppositeTitle: "Opposite side of the globe",
+        clearAntipode: "Clear",
+        clicked: "Clicked",
+        antipode: "Antipode",
+        oppositeCountry: "Country on the other side",
+        nearestCity: "Nearest city",
+        distance: "distance",
+        ocean: "ocean or area without a country in the map data",
+        unknownPlace: "unknown place",
+        coords: "coordinates",
+        geoNames: "GeoNames cities5000",
+        citiesJson: "cities.json / GeoNames",
+        naturalEarth: "Natural Earth populated places",
+        fallbackSource: "built-in fallback list"
+      }
+    };
+
+    const fallbackCities = [
+      ["Tokyo", "Japan", 35.6762, 139.6503, 37400068],
+      ["Delhi", "India", 28.6139, 77.2090, 32941000],
+      ["Shanghai", "China", 31.2304, 121.4737, 29210808],
+      ["Dhaka", "Bangladesh", 23.8103, 90.4125, 23210000],
+      ["Sao Paulo", "Brazil", -23.5558, -46.6396, 22429800],
+      ["Cairo", "Egypt", 30.0444, 31.2357, 22183200],
+      ["Mexico City", "Mexico", 19.4326, -99.1332, 22085200],
+      ["Beijing", "China", 39.9042, 116.4074, 21893095],
+      ["Mumbai", "India", 19.0760, 72.8777, 21297000],
+      ["New York", "United States", 40.7128, -74.0060, 18867000],
+      ["Paris", "France", 48.8566, 2.3522, 11060000],
+      ["London", "United Kingdom", 51.5072, -0.1276, 11262000],
+      ["Warszawa", "Poland", 52.2297, 21.0122, 1860281],
+      ["Krakow", "Poland", 50.0647, 19.9450, 800653],
+      ["Gdansk", "Poland", 54.3520, 18.6466, 486345],
+      ["Wroclaw", "Poland", 51.1079, 17.0385, 674312],
+      ["Poznan", "Poland", 52.4064, 16.9252, 541316]
+    ].map(([name, country, lat, lng, population]) => ({ name, country, lat, lng, population }));
+
+    const countryCodes = {
+      AD: "Andorra", AE: "United Arab Emirates", AF: "Afghanistan", AG: "Antigua and Barbuda", AI: "Anguilla",
+      AL: "Albania", AM: "Armenia", AO: "Angola", AR: "Argentina", AS: "American Samoa", AT: "Austria",
+      AU: "Australia", AW: "Aruba", AZ: "Azerbaijan", BA: "Bosnia and Herzegovina", BB: "Barbados",
+      BD: "Bangladesh", BE: "Belgium", BF: "Burkina Faso", BG: "Bulgaria", BH: "Bahrain", BI: "Burundi",
+      BJ: "Benin", BM: "Bermuda", BN: "Brunei", BO: "Bolivia", BR: "Brazil", BS: "Bahamas", BT: "Bhutan",
+      BW: "Botswana", BY: "Belarus", BZ: "Belize", CA: "Canada", CD: "Democratic Republic of the Congo",
+      CF: "Central African Republic", CG: "Republic of the Congo", CH: "Switzerland", CI: "Ivory Coast",
+      CL: "Chile", CM: "Cameroon", CN: "China", CO: "Colombia", CR: "Costa Rica", CU: "Cuba", CV: "Cape Verde",
+      CY: "Cyprus", CZ: "Czechia", DE: "Germany", DJ: "Djibouti", DK: "Denmark", DM: "Dominica",
+      DO: "Dominican Republic", DZ: "Algeria", EC: "Ecuador", EE: "Estonia", EG: "Egypt", ER: "Eritrea",
+      ES: "Spain", ET: "Ethiopia", FI: "Finland", FJ: "Fiji", FR: "France", GA: "Gabon", GB: "United Kingdom",
+      GD: "Grenada", GE: "Georgia", GF: "French Guiana", GH: "Ghana", GI: "Gibraltar", GL: "Greenland",
+      GM: "Gambia", GN: "Guinea", GP: "Guadeloupe", GQ: "Equatorial Guinea", GR: "Greece", GT: "Guatemala",
+      GU: "Guam", GW: "Guinea-Bissau", GY: "Guyana", HK: "Hong Kong", HN: "Honduras", HR: "Croatia",
+      HT: "Haiti", HU: "Hungary", ID: "Indonesia", IE: "Ireland", IL: "Israel", IN: "India", IQ: "Iraq",
+      IR: "Iran", IS: "Iceland", IT: "Italy", JM: "Jamaica", JO: "Jordan", JP: "Japan", KE: "Kenya",
+      KG: "Kyrgyzstan", KH: "Cambodia", KI: "Kiribati", KM: "Comoros", KN: "Saint Kitts and Nevis",
+      KP: "North Korea", KR: "South Korea", KW: "Kuwait", KY: "Cayman Islands", KZ: "Kazakhstan", LA: "Laos",
+      LB: "Lebanon", LC: "Saint Lucia", LI: "Liechtenstein", LK: "Sri Lanka", LR: "Liberia", LS: "Lesotho",
+      LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", LY: "Libya", MA: "Morocco", MC: "Monaco", MD: "Moldova",
+      ME: "Montenegro", MG: "Madagascar", MK: "North Macedonia", ML: "Mali", MM: "Myanmar", MN: "Mongolia",
+      MO: "Macau", MQ: "Martinique", MR: "Mauritania", MT: "Malta", MU: "Mauritius", MV: "Maldives",
+      MW: "Malawi", MX: "Mexico", MY: "Malaysia", MZ: "Mozambique", NA: "Namibia", NC: "New Caledonia",
+      NE: "Niger", NG: "Nigeria", NI: "Nicaragua", NL: "Netherlands", NO: "Norway", NP: "Nepal",
+      NZ: "New Zealand", OM: "Oman", PA: "Panama", PE: "Peru", PF: "French Polynesia", PG: "Papua New Guinea",
+      PH: "Philippines", PK: "Pakistan", PL: "Poland", PR: "Puerto Rico", PS: "Palestine", PT: "Portugal",
+      PY: "Paraguay", QA: "Qatar", RE: "Reunion", RO: "Romania", RS: "Serbia", RU: "Russia", RW: "Rwanda",
+      SA: "Saudi Arabia", SB: "Solomon Islands", SC: "Seychelles", SD: "Sudan", SE: "Sweden", SG: "Singapore",
+      SI: "Slovenia", SK: "Slovakia", SL: "Sierra Leone", SM: "San Marino", SN: "Senegal", SO: "Somalia",
+      SR: "Suriname", SS: "South Sudan", ST: "Sao Tome and Principe", SV: "El Salvador", SY: "Syria",
+      SZ: "Eswatini", TD: "Chad", TG: "Togo", TH: "Thailand", TJ: "Tajikistan", TL: "Timor-Leste",
+      TM: "Turkmenistan", TN: "Tunisia", TO: "Tonga", TR: "Turkey", TT: "Trinidad and Tobago", TW: "Taiwan",
+      TZ: "Tanzania", UA: "Ukraine", UG: "Uganda", US: "United States", UY: "Uruguay", UZ: "Uzbekistan",
+      VA: "Vatican City", VC: "Saint Vincent and the Grenadines", VE: "Venezuela", VN: "Vietnam",
+      VU: "Vanuatu", WS: "Samoa", XK: "Kosovo", YE: "Yemen", ZA: "South Africa", ZM: "Zambia", ZW: "Zimbabwe"
+    };
+
+    const polishAliases = {
+      "warsaw": "warszawa", "poland": "polska", "germany": "niemcy", "france": "francja",
+      "italy": "wlochy", "spain": "hiszpania", "united kingdom": "wielka brytania anglia",
+      "united states": "stany zjednoczone usa", "japan": "japonia", "china": "chiny",
+      "india": "indie", "russia": "rosja", "ukraine": "ukraina", "czechia": "czechy",
+      "slovakia": "slowacja", "lithuania": "litwa", "belarus": "bialorus", "austria": "austria",
+      "sweden": "szwecja", "norway": "norwegia", "finland": "finlandia", "netherlands": "holandia"
+    };
+
+    const state = {
+      language: "pl",
+      countries: [],
+      cities: [],
+      cityGrid: new Map(),
+      worldCities: [],
+      citySource: "",
+      selected: null,
+      visibleCities: [],
+      visibleKey: "",
+      searchResults: [],
+      labelsEnabled: true,
+      labelsVisible: false,
+      antipode: null
+    };
+
+    const PERF = {
+      pixelRatio: 1.2,
+      cameraUpdateMs: 180,
+      cityGridSize: 2,
+      majorCityLimit: 260,
+      searchPointLimit: 120,
+      nearLabelLimit: 18,
+      labelMinDistanceKm: 38
+    };
+
+    const majorCityNames = new Set([
+      "tokyo", "delhi", "shanghai", "dhaka", "sao paulo", "cairo", "mexico city", "beijing", "mumbai",
+      "osaka", "new york", "karachi", "chongqing", "istanbul", "buenos aires", "kolkata", "lagos",
+      "kinshasa", "manila", "tianjin", "guangzhou", "rio de janeiro", "lahore", "bangalore", "shenzhen",
+      "moscow", "chennai", "bogota", "paris", "jakarta", "lima", "bangkok", "hyderabad", "seoul",
+      "nagoya", "london", "chengdu", "nanjing", "tehran", "ho chi minh city", "luanda", "wuhan",
+      "ahmedabad", "kuala lumpur", "xian", "hong kong", "dongguan", "hangzhou", "foshan", "shenyang",
+      "riyadh", "baghdad", "santiago", "surat", "madrid", "suzhou", "pune", "harbin", "houston",
+      "dallas", "toronto", "miami", "singapore", "philadelphia", "atlanta", "fukuoka", "khartoum",
+      "barcelona", "johannesburg", "saint petersburg", "qingdao", "dalian", "washington", "yangon",
+      "alexandria", "jinan", "guadalajara", "boston", "melbourne", "phoenix", "monterrey", "rome",
+      "busan", "sydney", "medellin", "nairobi", "cape town", "ankara", "casablanca", "montreal",
+      "berlin", "athens", "milan", "vienna", "lisbon", "amsterdam", "stockholm", "oslo", "helsinki",
+      "copenhagen", "dublin", "brussels", "zurich", "prague", "warsaw", "budapest", "bucharest",
+      "kyiv", "minsk", "vilnius", "riga", "tallinn", "zagreb", "belgrade", "sofia", "bratislava",
+      "ljubljana", "sarajevo", "skopje", "tirana", "reykjavik", "luxembourg", "monaco", "vatican city",
+      "new delhi", "islamabad", "kabul", "doha", "dubai", "abu dhabi", "jerusalem", "beirut",
+      "amman", "damascus", "kuwait city", "muscat", "manama", "doha", "tashkent", "almaty", "astana",
+      "bishkek", "dushanbe", "ashgabat", "ulaanbaatar", "hanoi", "vientiane", "phnom penh", "taipei",
+      "ulaanbaatar", "canberra", "auckland", "wellington", "honolulu", "vancouver", "seattle",
+      "san francisco", "los angeles", "san diego", "las vegas", "denver", "chicago", "detroit",
+      "minneapolis", "new orleans", "orlando", "tampa", "charlotte", "baltimore", "pittsburgh",
+      "ottawa", "calgary", "edmonton", "quebec", "havana", "san juan", "santo domingo", "port-au-prince",
+      "kingston", "panama city", "san jose", "guatemala city", "tegucigalpa", "managua", "san salvador",
+      "quito", "guayaquil", "bogota", "caracas", "maracaibo", "la paz", "santa cruz", "asuncion",
+      "montevideo", "brasilia", "salvador", "recife", "fortaleza", "belo horizonte", "curitiba",
+      "porto alegre", "manaus", "accra", "abidjan", "dakar", "bamako", "conakry", "freetown",
+      "monrovia", "ouagadougou", "niamey", "lome", "cotonou", "yaounde", "douala", "libreville",
+      "brazzaville", "kigali", "kampala", "addis ababa", "mogadishu", "djibouti", "asmera",
+      "antananarivo", "maputo", "harare", "lusaka", "gaborone", "windhoek", "pretoria", "durban",
+      "port elizabeth", "tunis", "algiers", "rabat", "marrakesh", "tripoli", "juba", "dar es salaam"
+    ]);
+
+    const regionalMajorCities = {
+      Poland: ["Warsaw", "Kraków", "Krakow", "Łódź", "Lodz", "Wrocław", "Wroclaw", "Poznań", "Poznan", "Gdańsk", "Gdansk", "Szczecin", "Bydgoszcz", "Lublin", "Katowice", "Białystok", "Bialystok"],
+      Germany: ["Berlin", "Hamburg", "Munich", "München", "Cologne", "Köln", "Frankfurt am Main", "Stuttgart", "Düsseldorf", "Dortmund", "Essen", "Leipzig", "Bremen", "Dresden", "Hannover", "Nuremberg"],
+      France: ["Paris", "Marseille", "Lyon", "Toulouse", "Nice", "Nantes", "Montpellier", "Strasbourg", "Bordeaux", "Lille", "Rennes", "Reims"],
+      Spain: ["Madrid", "Barcelona", "Valencia", "Seville", "Sevilla", "Zaragoza", "Málaga", "Malaga", "Murcia", "Palma", "Bilbao"],
+      Italy: ["Rome", "Roma", "Milan", "Milano", "Naples", "Napoli", "Turin", "Torino", "Palermo", "Genoa", "Genova", "Bologna", "Florence", "Firenze", "Venice", "Venezia"],
+      "United Kingdom": ["London", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Leeds", "Sheffield", "Edinburgh", "Bristol", "Cardiff", "Belfast", "Newcastle upon Tyne"],
+      Ukraine: ["Kyiv", "Kiev", "Kharkiv", "Odesa", "Dnipro", "Donetsk", "Zaporizhzhia", "Lviv", "Kryvyi Rih"],
+      Czechia: ["Prague", "Praha", "Brno", "Ostrava", "Plzeň", "Plzen", "Liberec", "Olomouc"],
+      Slovakia: ["Bratislava", "Košice", "Kosice", "Prešov", "Presov", "Žilina", "Zilina"],
+      Lithuania: ["Vilnius", "Kaunas", "Klaipėda", "Klaipeda", "Šiauliai", "Siauliai"],
+      Belarus: ["Minsk", "Gomel", "Homel", "Mogilev", "Mahilyow", "Vitebsk", "Hrodna", "Grodno", "Brest"],
+      Netherlands: ["Amsterdam", "Rotterdam", "The Hague", "Den Haag", "Utrecht", "Eindhoven", "Groningen", "Tilburg"],
+      Belgium: ["Brussels", "Bruxelles", "Antwerp", "Antwerpen", "Ghent", "Gent", "Charleroi", "Liège", "Liege", "Bruges"],
+      Sweden: ["Stockholm", "Gothenburg", "Göteborg", "Malmö", "Malmo", "Uppsala", "Västerås", "Vasteras", "Örebro", "Orebro"],
+      Norway: ["Oslo", "Bergen", "Trondheim", "Stavanger", "Drammen", "Fredrikstad", "Kristiansand"],
+      Finland: ["Helsinki", "Espoo", "Tampere", "Vantaa", "Oulu", "Turku", "Jyväskylä", "Jyvaskyla"],
+      Romania: ["Bucharest", "Cluj-Napoca", "Timișoara", "Timisoara", "Iași", "Iasi", "Constanța", "Constanta", "Craiova", "Brașov", "Brasov"],
+      Hungary: ["Budapest", "Debrecen", "Szeged", "Miskolc", "Pécs", "Pecs", "Győr", "Gyor"],
+      Austria: ["Vienna", "Wien", "Graz", "Linz", "Salzburg", "Innsbruck", "Klagenfurt"],
+      Switzerland: ["Zurich", "Zürich", "Geneva", "Genève", "Basel", "Lausanne", "Bern", "Winterthur", "Lucerne"],
+      Russia: ["Moscow", "Saint Petersburg", "Novosibirsk", "Yekaterinburg", "Kazan", "Nizhniy Novgorod", "Chelyabinsk", "Samara", "Omsk", "Rostov-on-Don", "Ufa", "Krasnoyarsk", "Perm"],
+      "United States": ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville", "Fort Worth", "Columbus", "Charlotte", "San Francisco", "Seattle", "Denver", "Washington", "Boston", "Detroit", "Miami", "Atlanta"],
+      Canada: ["Toronto", "Montreal", "Vancouver", "Calgary", "Edmonton", "Ottawa", "Winnipeg", "Quebec", "Hamilton", "Kitchener"],
+      China: ["Beijing", "Shanghai", "Guangzhou", "Shenzhen", "Chongqing", "Tianjin", "Chengdu", "Nanjing", "Wuhan", "Xi'an", "Hangzhou", "Dongguan", "Foshan", "Shenyang", "Qingdao"],
+      India: ["Delhi", "Mumbai", "Bangalore", "Bengaluru", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur"],
+      Brazil: ["São Paulo", "Sao Paulo", "Rio de Janeiro", "Brasília", "Brasilia", "Salvador", "Fortaleza", "Belo Horizonte", "Manaus", "Curitiba", "Recife", "Porto Alegre", "Belém", "Belem"],
+      Japan: ["Tokyo", "Yokohama", "Osaka", "Nagoya", "Sapporo", "Fukuoka", "Kobe", "Kyoto", "Kawasaki", "Saitama", "Hiroshima", "Sendai"],
+      Australia: ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Gold Coast", "Canberra", "Newcastle", "Wollongong", "Hobart"],
+      Turkey: ["Istanbul", "Ankara", "İzmir", "Izmir", "Bursa", "Antalya", "Adana", "Konya", "Gaziantep"],
+      Mexico: ["Mexico City", "Guadalajara", "Monterrey", "Puebla", "Tijuana", "León", "Leon", "Juárez", "Juarez", "Mérida", "Merida"],
+      Argentina: ["Buenos Aires", "Córdoba", "Cordoba", "Rosario", "Mendoza", "La Plata", "Mar del Plata", "San Miguel de Tucumán"],
+      "South Africa": ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth", "Gqeberha", "Bloemfontein"],
+      Egypt: ["Cairo", "Alexandria", "Giza", "Shubra El Kheima", "Port Said", "Suez", "Luxor", "Aswan"],
+      Nigeria: ["Lagos", "Kano", "Ibadan", "Abuja", "Port Harcourt", "Benin City", "Maiduguri", "Zaria"]
+    };
+
+    const globeEl = document.getElementById("globe");
+    const statusEl = document.getElementById("status");
+    const tooltipEl = document.getElementById("tooltip");
+    const searchEl = document.getElementById("search");
+    const suggestionsEl = document.getElementById("suggestions");
+    const antipodePanel = document.getElementById("antipodePanel");
+
+    const globe = Globe()(globeEl)
+      .backgroundColor("rgba(0,0,0,0)")
+      .globeMaterial(new THREE.MeshLambertMaterial({ color: 0xe4e4e1 }))
+      .showAtmosphere(true)
+      .atmosphereColor("#d8d8d5")
+      .atmosphereAltitude(0.08)
+      .polygonAltitude(0.004)
+      .polygonCapColor(() => "rgba(142,142,142,0.82)")
+      .polygonSideColor(() => "rgba(125,125,125,0.5)")
+      .polygonStrokeColor(() => "rgba(248,248,246,0.58)")
+      .polygonLabel(feature => countryLabel(feature))
+      .onPolygonHover(feature => setTooltip(feature ? countryLabel(feature) : "", window.event))
+      .onPolygonClick((feature, event, coords) => {
+        const point = coords || getFeatureCenter(feature);
+        showAntipode(point.lat, point.lng, countryName(feature));
+      })
+      .pointsMerge(true)
+      .pointAltitude(city => state.searchResults.includes(city) ? 0.006 : 0.003)
+      .pointRadius(city => city === state.selected ? 0.18 : state.searchResults.includes(city) ? 0.08 : 0.045)
+      .pointColor(city => city === state.selected ? "#ff2f2f" : state.searchResults.includes(city) ? "rgba(255,47,47,0.86)" : "rgba(45,45,45,0.8)")
+      .pointLabel(city => cityLabel(city))
+      .onPointHover(city => setTooltip(city ? cityLabel(city) : "", window.event))
+      .onPointClick(city => {
+        state.selected = city;
+        showAntipode(city.lat, city.lng, city.name);
+        globe.pointOfView({ lat: city.lat, lng: city.lng, altitude: Math.min(currentAltitude(), 0.72) }, 900);
+        renderLayers();
+        setTimeout(() => {
+          updateVisibleCities(true);
+          updateCityLabels();
+        }, 1000);
+      })
+      .onGlobeClick(coords => showAntipode(coords.lat, coords.lng, t().unknownPlace))
+      .customLayerData([])
+      .customThreeObject(createAntipodeStick)
+      .customThreeObjectUpdate(updateAntipodeStick)
+      .labelLat(city => city.lat)
+      .labelLng(city => city.lng)
+      .labelText(city => city.name)
+      .labelSize(city => city === state.selected ? 0.22 : city.isMajor ? 0.13 : 0.105)
+      .labelAltitude(0.006)
+      .labelDotRadius(0)
+      .labelColor(() => "rgba(35,35,35,0.9)")
+      .labelResolution(3)
+      .ringLat(item => item.lat)
+      .ringLng(item => item.lng)
+      .ringColor(item => item.origin ? () => "rgba(255,47,47,0.42)" : () => "rgba(255,47,47,0.88)")
+      .ringMaxRadius(item => item.origin ? 3.5 : 5)
+      .ringPropagationSpeed(1.5)
+      .ringRepeatPeriod(900);
+
+    globe.controls().autoRotate = true;
+    globe.controls().autoRotateSpeed = 0.25;
+    globe.controls().zoomSpeed = 0.34;
+    globe.controls().enableDamping = true;
+    globe.controls().dampingFactor = 0.08;
+    globe.pointOfView({ lat: 24, lng: 12, altitude: 2.25 }, 0);
+    globe.controls().addEventListener("change", scheduleCameraUpdate);
+
+    try {
+      globe.renderer().setPixelRatio(Math.min(PERF.pixelRatio, window.devicePixelRatio || 1));
+    } catch (error) {
+      console.warn(error);
+    }
+
+    window.addEventListener("resize", () => {
+      globe.width(window.innerWidth);
+      globe.height(window.innerHeight);
+    });
+
+    document.getElementById("language").addEventListener("click", () => {
+      state.language = state.language === "pl" ? "en" : "pl";
+      applyLanguage();
+      updateSuggestions(searchEl.value);
+      if (state.antipode) renderAntipodePanel();
+    });
+
+    document.getElementById("home").addEventListener("click", () => {
+      state.selected = null;
+      searchEl.value = "";
+      state.searchResults = [];
+      suggestionsEl.classList.remove("is-open");
+      clearAntipode();
+      globe.pointOfView({ lat: 24, lng: 12, altitude: 2.25 }, 900);
+      renderLayers();
+    });
+
+    document.getElementById("toggleLabels").addEventListener("click", event => {
+      state.labelsEnabled = !state.labelsEnabled;
+      event.currentTarget.classList.toggle("is-active", state.labelsEnabled);
+      applyLanguage();
+      updateCityLabels();
+    });
+
+    document.getElementById("toggleRotation").addEventListener("click", event => {
+      const enabled = !globe.controls().autoRotate;
+      globe.controls().autoRotate = enabled;
+      event.currentTarget.classList.toggle("is-active", enabled);
+      applyLanguage();
+    });
+
+    searchEl.addEventListener("input", () => updateSuggestions(searchEl.value));
+    searchEl.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        const first = suggestionsEl.querySelector(".suggestion");
+        if (first) first.click();
+      }
+    });
+
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".search")) suggestionsEl.classList.remove("is-open");
+    });
+
+    applyLanguage();
+    loadData();
+
+    async function loadData() {
+      setStatus(t().loading);
+      const countries = await loadCountries();
+      let cityResult;
+
+      cityResult = await loadBestCitySource();
+
+      state.countries = countries;
+      state.cities = cityResult.cities;
+      state.worldCities = selectMajorCities(cityResult.cities);
+      buildCityGrid(cityResult.cities);
+      state.citySource = cityResult.source;
+      renderLayers();
+      applyLanguage();
+      setStatus(t().ready(formatNumber(countries.length), formatNumber(state.cities.length), cityResult.source));
+    }
+
+    async function loadCountries() {
+      const response = await fetch(COUNTRIES_URL);
+      if (!response.ok) throw new Error("Could not load countries.");
+      const world = await response.json();
+      return topojson.feature(world, world.objects.countries).features
+        .filter(feature =>
+          feature.geometry &&
+          ["Polygon", "MultiPolygon"].includes(feature.geometry.type) &&
+          hasValidCoordinates(feature.geometry.coordinates)
+        );
+    }
+
+    async function loadGeoNamesCities() {
+      if (!window.JSZip) throw new Error("JSZip unavailable.");
+      const response = await fetch(GEONAMES_CITIES_URL);
+      if (!response.ok) throw new Error("Could not load GeoNames.");
+      const zip = await JSZip.loadAsync(await response.arrayBuffer());
+      const file = zip.file("cities5000.txt");
+      if (!file) throw new Error("GeoNames archive did not contain cities5000.txt.");
+      const rows = (await file.async("string")).split("\n");
+      const cities = rows.map(parseGeoNamesRow).filter(Boolean).sort((a, b) => (b.population || 0) - (a.population || 0));
+      if (cities.length < 10000) throw new Error("GeoNames returned too few cities.");
+      return { cities, source: t().geoNames };
+    }
+
+    async function loadBestCitySource() {
+      try {
+        return await loadGeoNamesCities();
+      } catch (error) {
+        console.warn(error);
+      }
+
+      try {
+        return await loadCitiesJson();
+      } catch (error) {
+        console.warn(error);
+        setStatus(t().fallback);
+        return await loadNaturalEarthCities();
+      }
+    }
+
+    async function loadCitiesJson() {
+      const response = await fetch(CITIES_JSON_URL);
+      if (!response.ok) throw new Error("Could not load cities.json.");
+      const data = await response.json();
+      const cities = data.map(item => {
+        const country = countryCodes[item.country] || item.country || "";
+        return {
+          name: item.name,
+          asciiName: item.name,
+          aliases: "",
+          country,
+          lat: Number(item.lat),
+          lng: Number(item.lng),
+          population: 0
+        };
+      }).filter(validCity);
+      if (cities.length < 50000) throw new Error("cities.json returned too few cities.");
+      return { cities, source: t().citiesJson };
+    }
+
+    async function loadNaturalEarthCities() {
+      try {
+        const response = await fetch(NATURAL_EARTH_CITIES_URL);
+        if (!response.ok) throw new Error("Could not load Natural Earth cities.");
+        const geo = await response.json();
+        const cities = geo.features.map(feature => {
+          const props = feature.properties || {};
+          const coords = feature.geometry && feature.geometry.coordinates;
+          if (!coords) return null;
+          return {
+            name: props.NAME || props.NAMEASCII || props.name || "City",
+            asciiName: props.NAMEASCII || props.NAME || props.name || "City",
+            country: props.ADM0NAME || props.SOV0NAME || props.country || "",
+            lat: Number(coords[1]),
+            lng: Number(coords[0]),
+            population: Number(props.POP_MAX || props.POP_MIN || props.pop_max || 0)
+          };
+        }).filter(validCity).sort((a, b) => (b.population || 0) - (a.population || 0));
+        if (cities.length > 100) return { cities, source: t().naturalEarth };
+      } catch (error) {
+        console.warn(error);
+      }
+      return { cities: fallbackCities, source: t().fallbackSource };
+    }
+
+    function parseGeoNamesRow(row) {
+      const col = row.split("\t");
+      if (col.length < 19) return null;
+      const lat = Number(col[4]);
+      const lng = Number(col[5]);
+      const population = Number(col[14] || 0);
+      const country = countryCodes[col[8]] || col[8] || "";
+      const city = {
+        id: col[0],
+        name: col[1],
+        asciiName: col[2] || col[1],
+        aliases: col[3] || "",
+        lat,
+        lng,
+        country,
+        population
+      };
+      return validCity(city) ? city : null;
+    }
+
+    function buildCityGrid(cities) {
+      state.cityGrid = new Map();
+      for (const city of cities) {
+        const key = cityGridKey(city.lat, city.lng);
+        const bucket = state.cityGrid.get(key);
+        if (bucket) bucket.push(city);
+        else state.cityGrid.set(key, [city]);
+      }
+    }
+
+    function getCitiesNear(lat, lng, maxKm) {
+      if (!state.cityGrid.size) return [];
+      const degreeRadius = Math.max(1, Math.ceil(maxKm / 111 / PERF.cityGridSize));
+      const latCell = Math.floor((lat + 90) / PERF.cityGridSize);
+      const lngCell = Math.floor((normalizeLng(lng) + 180) / PERF.cityGridSize);
+      const matches = [];
+
+      for (let y = latCell - degreeRadius; y <= latCell + degreeRadius; y++) {
+        for (let x = lngCell - degreeRadius; x <= lngCell + degreeRadius; x++) {
+          const wrappedX = ((x % Math.ceil(360 / PERF.cityGridSize)) + Math.ceil(360 / PERF.cityGridSize)) % Math.ceil(360 / PERF.cityGridSize);
+          const bucket = state.cityGrid.get(`${y}:${wrappedX}`);
+          if (!bucket) continue;
+          for (const city of bucket) {
+            const distanceKm = haversineKm(lat, lng, city.lat, city.lng);
+            if (distanceKm <= maxKm || city === state.selected) matches.push({ city, distanceKm });
+          }
+        }
+      }
+
+      return matches;
+    }
+
+    function cityGridKey(lat, lng) {
+      const y = Math.floor((lat + 90) / PERF.cityGridSize);
+      const x = Math.floor((normalizeLng(lng) + 180) / PERF.cityGridSize);
+      return `${y}:${x}`;
+    }
+
+    function pickEvenly(items, limit) {
+      if (items.length <= limit) return items.slice();
+      const step = items.length / limit;
+      const picked = [];
+      for (let i = 0; i < limit; i++) picked.push(items[Math.floor(i * step)]);
+      return picked;
+    }
+
+    function selectMajorCities(cities) {
+      const seen = new Set();
+      const selected = [];
+      const regionalNames = new Map();
+
+      Object.entries(regionalMajorCities).forEach(([country, names]) => {
+        names.forEach(name => regionalNames.set(`${normalize(country)}:${normalize(name)}`, true));
+      });
+
+      for (const city of cities) {
+        const name = normalize(city.asciiName || city.name);
+        const country = normalize(city.country);
+        const isRegional = regionalNames.has(`${country}:${name}`) || regionalNames.has(`${country}:${normalize(city.name)}`);
+        if ((!majorCityNames.has(name) && !isRegional) || seen.has(`${country}:${name}`)) continue;
+        selected.push({ ...city, isMajor: true });
+        seen.add(`${country}:${name}`);
+      }
+
+      const fallbackMajor = cities
+        .filter(city => city.population > 1000000)
+        .sort((a, b) => (b.population || 0) - (a.population || 0))
+        .slice(0, PERF.majorCityLimit)
+        .map(city => ({ ...city, isMajor: true }));
+
+      for (const city of fallbackMajor) {
+        const key = `${normalize(city.country)}:${normalize(city.asciiName || city.name)}`;
+        if (!seen.has(key)) {
+          selected.push(city);
+          seen.add(key);
+        }
+      }
+
+      return selected;
+    }
+
+    function renderLayers() {
+      globe.polygonsData(state.countries);
+      updateVisibleCities(true);
+      updateCityLabels();
+    }
+
+    let cameraUpdateTimer = null;
+    function scheduleCameraUpdate() {
+      if (cameraUpdateTimer) return;
+      cameraUpdateTimer = window.setTimeout(() => {
+        cameraUpdateTimer = null;
+        requestAnimationFrame(() => {
+          updateVisibleCities(false);
+          updateCityLabels();
+        });
+      }, PERF.cameraUpdateMs);
+    }
+
+    function updateVisibleCities(force) {
+      if (!state.cities.length) {
+        globe.pointsData([]);
+        return;
+      }
+
+      const searchKey = state.searchResults.map(city => city.id || city.name).join("|");
+      const key = `${searchKey}:${state.selected ? state.selected.id || state.selected.name : ""}`;
+      if (!force && key === state.visibleKey) return;
+      state.visibleKey = key;
+
+      const unique = new Map();
+      const source = state.searchResults.length ? state.searchResults : state.worldCities;
+      for (const city of source) unique.set(city.id || `${city.name}:${city.lat}:${city.lng}`, city);
+
+      if (state.selected) unique.set(state.selected.id || `${state.selected.name}:${state.selected.lat}:${state.selected.lng}`, state.selected);
+      const visible = [...unique.values()];
+      state.visibleCities = visible;
+      globe.pointsData(visible);
+      globe.customLayerData(state.antipode ? [state.antipode] : []);
+    }
+
+    function updateCityLabels() {
+      const shouldShow = state.labelsEnabled;
+      state.labelsVisible = shouldShow;
+      if (!shouldShow) {
+        globe.labelsData([]);
+        return;
+      }
+
+      const labels = state.searchResults.length
+        ? state.visibleCities.slice(0, PERF.searchPointLimit)
+        : state.worldCities;
+      globe.labelsData(labels);
+    }
+
+    function updateSuggestions(query) {
+      const value = normalize(query);
+      suggestionsEl.innerHTML = "";
+      if (value.length < 2) {
+        state.searchResults = [];
+        suggestionsEl.classList.remove("is-open");
+        renderLayers();
+        return;
+      }
+
+      const cityMatches = state.cities
+        .filter(city => searchableCityText(city).includes(value))
+        .slice(0, PERF.searchPointLimit)
+        .map(city => ({ type: "city", label: city.name, meta: city.country, item: city }));
+
+      state.searchResults = cityMatches.map(match => match.item);
+      updateVisibleCities(true);
+      updateCityLabels();
+
+      const countryMatches = state.countries
+        .filter(country => searchableCountryText(country).includes(value))
+        .slice(0, 4)
+        .map(country => ({ type: "country", label: countryName(country), meta: t().countryMeta, item: country }));
+
+      [...cityMatches.slice(0, 8), ...countryMatches].slice(0, 12).forEach(match => {
+        const option = document.createElement("div");
+        option.className = "suggestion";
+        option.setAttribute("role", "option");
+        option.innerHTML = `<span>${escapeHtml(match.label)}</span><small>${escapeHtml(match.meta || "")}</small>`;
+        option.addEventListener("click", () => {
+          searchEl.value = match.label;
+          suggestionsEl.classList.remove("is-open");
+          if (match.type === "city") {
+            state.selected = match.item;
+            state.searchResults = [match.item];
+            globe.pointOfView({ lat: match.item.lat, lng: match.item.lng, altitude: 0.55 }, 900);
+            renderLayers();
+            setTimeout(() => {
+              updateVisibleCities(true);
+              updateCityLabels();
+            }, 1000);
+          } else {
+            const center = getFeatureCenter(match.item);
+            globe.pointOfView({ lat: center.lat, lng: center.lng, altitude: 1.1 }, 900);
+          }
+        });
+        suggestionsEl.appendChild(option);
+      });
+
+      suggestionsEl.classList.toggle("is-open", suggestionsEl.children.length > 0);
+    }
+
+    function showAntipode(lat, lng, originName) {
+      clearAntipode();
+      const antipode = {
+        originName,
+        originLat: lat,
+        originLng: lng,
+        lat: -lat,
+        lng: normalizeLng(lng + 180)
+      };
+      antipode.country = findCountryAt(antipode.lat, antipode.lng);
+      antipode.nearestCity = findNearestCity(antipode.lat, antipode.lng);
+      state.antipode = antipode;
+      updateVisibleCities(true);
+      globe.ringsData([
+        { lat, lng, origin: true },
+        { lat: antipode.lat, lng: antipode.lng, origin: false }
+      ]);
+      renderAntipodePanel();
+    }
+
+    function clearAntipode() {
+      state.antipode = null;
+      antipodePanel.classList.remove("is-visible");
+      antipodePanel.innerHTML = "";
+      globe.ringsData([]);
+      updateVisibleCities(true);
+    }
+
+    function renderAntipodePanel() {
+      const item = state.antipode;
+      if (!item) return;
+      const country = item.country ? countryName(item.country) : t().ocean;
+      const nearest = item.nearestCity ? `${escapeHtml(item.nearestCity.name)}, ${escapeHtml(item.nearestCity.country)} (${t().distance}: ${formatDistance(item.nearestCity.distanceKm)})` : t().noData;
+
+      antipodePanel.innerHTML = `
+        <div class="antipode-head">
+          <h2>${t().oppositeTitle}</h2>
+          <button class="clear-antipode" type="button">${t().clearAntipode}</button>
+        </div>
+        <p><b>${t().clicked}:</b> ${escapeHtml(item.originName)} · ${formatCoords(item.originLat, item.originLng)}</p>
+        <p><b>${t().antipode}:</b> ${formatCoords(item.lat, item.lng)}</p>
+        <p><b>${t().oppositeCountry}:</b> ${escapeHtml(country)}</p>
+        <p><b>${t().nearestCity}:</b> ${nearest}</p>
+      `;
+      antipodePanel.querySelector(".clear-antipode").addEventListener("click", clearAntipode);
+      antipodePanel.classList.add("is-visible");
+    }
+
+    function createAntipodeStick() {
+      const group = new THREE.Group();
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xff2f2f,
+        transparent: true,
+        opacity: 0.98,
+        depthTest: false,
+        depthWrite: false
+      });
+      const sphereGeometry = new THREE.SphereGeometry(2.4, 18, 18);
+      const cylinderGeometry = new THREE.CylinderGeometry(0.78, 0.78, 1, 12, 1, true);
+      const start = new THREE.Mesh(sphereGeometry, material);
+      const end = new THREE.Mesh(sphereGeometry, material);
+      const line = new THREE.Mesh(cylinderGeometry, material);
+      start.renderOrder = 99;
+      end.renderOrder = 99;
+      line.renderOrder = 98;
+      group.add(line, start, end);
+      group.userData = { start, end, line };
+      return group;
+    }
+
+    function updateAntipodeStick(group, data) {
+      const start = vectorFromCoords(data.originLat, data.originLng, 0.018);
+      const end = vectorFromCoords(data.lat, data.lng, 0.018);
+      const midpoint = start.clone().add(end).multiplyScalar(0.5);
+      const direction = end.clone().sub(start);
+      const length = direction.length();
+      group.userData.start.position.copy(start);
+      group.userData.end.position.copy(end);
+      group.userData.line.position.copy(midpoint);
+      group.userData.line.scale.set(1, length, 1);
+      group.userData.line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    }
+
+    function vectorFromCoords(lat, lng, altitude) {
+      const coords = globe.getCoords(lat, lng, altitude);
+      return new THREE.Vector3(coords.x, coords.y, coords.z);
+    }
+
+    function findCountryAt(lat, lng) {
+      return state.countries.find(feature => pointInFeature(lng, lat, feature));
+    }
+
+    function pointInFeature(lng, lat, feature) {
+      const polygons = feature.geometry.type === "Polygon" ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+      return polygons.some(poly => pointInPolygonSet(lng, lat, poly));
+    }
+
+    function pointInPolygonSet(lng, lat, rings) {
+      if (!rings.length || !pointInRing(lng, lat, rings[0])) return false;
+      return !rings.slice(1).some(ring => pointInRing(lng, lat, ring));
+    }
+
+    function pointInRing(lng, lat, ring) {
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const xi = ring[i][0], yi = ring[i][1];
+        const xj = ring[j][0], yj = ring[j][1];
+        const crosses = ((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi);
+        if (crosses) inside = !inside;
+      }
+      return inside;
+    }
+
+    function findNearestCity(lat, lng) {
+      let best = null;
+      const candidates = state.cities.length > 12000 ? state.cities : state.cities.slice();
+      for (const city of candidates) {
+        const distanceKm = haversineKm(lat, lng, city.lat, city.lng);
+        if (!best || distanceKm < best.distanceKm) best = { ...city, distanceKm };
+      }
+      return best;
+    }
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      const radius = 6371;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return 2 * radius * Math.asin(Math.sqrt(a));
+    }
+
+    function getFeatureCenter(feature) {
+      const coords = [];
+      collectCoordinates(feature.geometry.coordinates, coords);
+      const totals = coords.reduce((acc, pair) => {
+        acc.lng += pair[0];
+        acc.lat += pair[1];
+        return acc;
+      }, { lat: 0, lng: 0 });
+      const count = Math.max(coords.length, 1);
+      return { lat: totals.lat / count, lng: totals.lng / count };
+    }
+
+    function collectCoordinates(value, output) {
+      if (!Array.isArray(value)) return;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        output.push(value);
+        return;
+      }
+      value.forEach(item => collectCoordinates(item, output));
+    }
+
+    function hasValidCoordinates(value) {
+      if (!Array.isArray(value)) return false;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        return Number.isFinite(value[0]) && Number.isFinite(value[1]);
+      }
+      return value.some(item => hasValidCoordinates(item));
+    }
+
+    function validCity(city) {
+      return city && city.name && Number.isFinite(city.lat) && Number.isFinite(city.lng) && Math.abs(city.lat) <= 90 && Math.abs(city.lng) <= 180;
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = t().htmlLang;
+      document.title = t().title;
+      searchEl.placeholder = t().search;
+      document.getElementById("language").textContent = state.language === "pl" ? "EN" : "PL";
+      document.getElementById("citiesLabel").textContent = t().cities;
+      document.getElementById("citiesCount").textContent = state.cities.length ? formatNumber(state.cities.length) : "...";
+      document.getElementById("labelsToggleText").textContent = state.labelsEnabled ? t().labelsOn : t().labelsOff;
+      document.getElementById("rotationToggleText").textContent = globe.controls().autoRotate ? t().rotationOn : t().rotationOff;
+      document.getElementById("antipodeHint").textContent = t().antipodeHint;
+    }
+
+    function countryLabel(feature) {
+      return `<b>${escapeHtml(countryName(feature))}</b><small>${escapeHtml(t().countryMeta)}</small>`;
+    }
+
+    function cityLabel(city) {
+      const pop = city.population ? `<small>${t().cityPopulation}: ${formatNumber(Math.round(city.population))}</small>` : "";
+      return `<b>${escapeHtml(city.name)}</b><small>${escapeHtml(city.country || "")}</small>${pop}`;
+    }
+
+    function countryName(feature) {
+      const props = feature.properties || {};
+      return props.name || props.NAME || props.ADMIN || props.NAME_LONG || `ID ${props.id || feature.id || ""}`.trim();
+    }
+
+    function searchableCityText(city) {
+      return withPolishAliases(`${city.name} ${city.asciiName || ""} ${city.aliases || ""} ${city.country}`);
+    }
+
+    function searchableCountryText(country) {
+      return withPolishAliases(countryName(country));
+    }
+
+    function withPolishAliases(value) {
+      const normalized = normalize(value);
+      const aliases = Object.entries(polishAliases)
+        .filter(([english]) => normalized.includes(english))
+        .map(([, polish]) => polish)
+        .join(" ");
+      return `${normalized} ${aliases}`;
+    }
+
+    function setTooltip(html, event) {
+      if (!html) {
+        tooltipEl.classList.remove("is-visible");
+        return;
+      }
+      tooltipEl.innerHTML = html;
+      tooltipEl.style.left = `${(event && event.clientX) || window.innerWidth / 2}px`;
+      tooltipEl.style.top = `${(event && event.clientY) || window.innerHeight / 2}px`;
+      tooltipEl.classList.add("is-visible");
+    }
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function currentAltitude() {
+      const pov = globe.pointOfView();
+      return pov && Number.isFinite(pov.altitude) ? pov.altitude : 2.25;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString(state.language === "pl" ? "pl-PL" : "en-US");
+    }
+
+    function formatDistance(value) {
+      return `${formatNumber(Math.round(value))} km`;
+    }
+
+    function formatCoords(lat, lng) {
+      return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    }
+
+    function normalize(value) {
+      return String(value || "")
+        .toLocaleLowerCase("pl-PL")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function normalizeLng(lng) {
+      return ((((lng + 180) % 360) + 360) % 360) - 180;
+    }
+
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
+
+    function t() {
+      return text[state.language];
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

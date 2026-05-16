@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mirror Globe</title>
+  <title>Minimalistyczny glob</title>
   <style>
     :root {
       color-scheme: light;
@@ -385,7 +385,7 @@
     const text = {
       pl: {
         htmlLang: "pl",
-        title: "Mirror Globe",
+        title: "Minimalistyczny glob",
         search: "Szukaj miasta lub państwa...",
         cities: "miast",
         labelsOn: "Nazwy: auto",
@@ -759,7 +759,71 @@
       Argentina: ["Buenos Aires", "Córdoba", "Cordoba", "Rosario", "Mendoza", "La Plata", "Mar del Plata", "San Miguel de Tucumán"],
       "South Africa": ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth", "Gqeberha", "Bloemfontein"],
       Egypt: ["Cairo", "Alexandria", "Giza", "Shubra El Kheima", "Port Said", "Suez", "Luxor", "Aswan"],
-      Nigeria: ["Lagos", "Kano", "Ibadan", "Abuja", "Port Harcourt", "Benin City", "Maiduguri", "Zaria"]
+      Nigeria: ["Lagos", "Kano", "Ibadan", "Abuja", "Port Harcourt", "Benin City", "Maiduguri", "Zaria"],
+      Morocco: ["Casablanca", "Rabat", "Marrakesh", "Marrakech", "Fes", "Tangier", "Agadir", "Meknes"],
+      Algeria: ["Algiers", "Oran", "Constantine", "Annaba", "Blida", "Batna", "Sétif", "Setif"],
+      Tunisia: ["Tunis", "Sfax", "Sousse", "Kairouan", "Bizerte", "Gabès", "Gabes"],
+      Ethiopia: ["Addis Ababa", "Dire Dawa", "Mekelle", "Gondar", "Bahir Dar", "Hawassa", "Jimma"],
+      Kenya: ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Malindi"],
+      Ghana: ["Accra", "Kumasi", "Tamale", "Sekondi-Takoradi", "Ashaiman", "Cape Coast"],
+      "Ivory Coast": ["Abidjan", "Yamoussoukro", "Bouaké", "Bouake", "Daloa", "San-Pédro", "San-Pedro", "Korhogo"],
+      Senegal: ["Dakar", "Touba", "Thiès", "Thies", "Kaolack", "Saint-Louis", "Ziguinchor"],
+      Tanzania: ["Dar es Salaam", "Dodoma", "Mwanza", "Arusha", "Mbeya", "Morogoro", "Tanga"],
+      Uganda: ["Kampala", "Gulu", "Lira", "Mbarara", "Jinja", "Mbale"],
+      Angola: ["Luanda", "Huambo", "Lobito", "Benguela", "Lubango", "Malanje"],
+      Cameroon: ["Douala", "Yaounde", "Yaoundé", "Bamenda", "Bafoussam", "Garoua", "Maroua"],
+      "Democratic Republic of the Congo": ["Kinshasa", "Lubumbashi", "Mbuji-Mayi", "Kisangani", "Kananga", "Bukavu", "Goma"],
+      Colombia: ["Bogota", "Bogotá", "Medellin", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", "Cucuta", "Bucaramanga", "Pereira"],
+      Peru: ["Lima", "Arequipa", "Trujillo", "Chiclayo", "Piura", "Cusco", "Iquitos", "Huancayo"],
+      Chile: ["Santiago", "Valparaíso", "Valparaiso", "Concepción", "Concepcion", "La Serena", "Antofagasta", "Temuco", "Puerto Montt"],
+      Venezuela: ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay", "Ciudad Guayana", "Maturín", "Maturin"],
+      Ecuador: ["Quito", "Guayaquil", "Cuenca", "Santo Domingo", "Machala", "Manta", "Portoviejo"],
+      Bolivia: ["La Paz", "Santa Cruz de la Sierra", "Santa Cruz", "Cochabamba", "Sucre", "Oruro", "Tarija", "Potosí", "Potosi"],
+      Paraguay: ["Asuncion", "Asunción", "Ciudad del Este", "San Lorenzo", "Luque", "Capiatá", "Capiata"],
+      Uruguay: ["Montevideo", "Salto", "Paysandú", "Paysandu", "Las Piedras", "Rivera", "Maldonado"],
+      Guatemala: ["Guatemala City", "Mixco", "Villa Nueva", "Quetzaltenango", "Escuintla"],
+      Cuba: ["Havana", "Santiago de Cuba", "Camagüey", "Camaguey", "Holguín", "Holguin", "Santa Clara"],
+      "Dominican Republic": ["Santo Domingo", "Santiago de los Caballeros", "La Romana", "San Pedro de Macorís", "San Pedro de Macoris"],
+      Jamaica: ["Kingston", "Spanish Town", "Portmore", "Montego Bay", "Mandeville"]
+    };
+
+    const countryRegions = {
+      Poland: "Europe", Germany: "Europe", France: "Europe", Spain: "Europe", Italy: "Europe", "United Kingdom": "Europe",
+      Ukraine: "Europe", Czechia: "Europe", Slovakia: "Europe", Lithuania: "Europe", Belarus: "Europe", Netherlands: "Europe",
+      Belgium: "Europe", Sweden: "Europe", Norway: "Europe", Finland: "Europe", Romania: "Europe", Hungary: "Europe",
+      Austria: "Europe", Switzerland: "Europe", Russia: "Europe",
+      "United States": "North America", Canada: "North America", Mexico: "North America",
+      Argentina: "South America", Brazil: "South America", Colombia: "South America", Peru: "South America",
+      Chile: "South America", Venezuela: "South America", Ecuador: "South America", Bolivia: "South America",
+      Paraguay: "South America", Uruguay: "South America",
+      Guatemala: "Central America", Cuba: "Central America", "Dominican Republic": "Central America", Jamaica: "Central America",
+      China: "Asia", India: "Asia", Japan: "Asia", Turkey: "Asia",
+      Australia: "Oceania",
+      "South Africa": "Africa", Egypt: "Africa", Nigeria: "Africa", Morocco: "Africa", Algeria: "Africa", Tunisia: "Africa",
+      Ethiopia: "Africa", Kenya: "Africa", Ghana: "Africa", "Ivory Coast": "Africa", Senegal: "Africa", Tanzania: "Africa",
+      Uganda: "Africa", Angola: "Africa", Cameroon: "Africa", "Democratic Republic of the Congo": "Africa"
+    };
+
+    const regionQuotas = {
+      Europe: 70,
+      "North America": 38,
+      "South America": 48,
+      "Central America": 22,
+      Africa: 58,
+      Asia: 54,
+      Oceania: 14,
+      Other: 12
+    };
+
+    const countryQuotas = {
+      Europe: 5,
+      "North America": 14,
+      "South America": 7,
+      "Central America": 5,
+      Africa: 5,
+      Asia: 10,
+      Oceania: 8,
+      Other: 3
     };
 
     const globeEl = document.getElementById("globe");
@@ -1061,15 +1125,16 @@
       const regionalNames = new Map();
 
       Object.entries(regionalMajorCities).forEach(([country, names]) => {
-        names.forEach(name => regionalNames.set(`${normalize(country)}:${normalize(name)}`, true));
+        names.forEach((name, priority) => regionalNames.set(`${normalize(country)}:${normalize(name)}`, priority));
       });
 
       for (const city of cities) {
         const name = normalize(city.asciiName || city.name);
         const country = normalize(city.country);
-        const isRegional = regionalNames.has(`${country}:${name}`) || regionalNames.has(`${country}:${normalize(city.name)}`);
+        const priority = regionalNames.get(`${country}:${name}`) ?? regionalNames.get(`${country}:${normalize(city.name)}`);
+        const isRegional = priority !== undefined;
         if (!isRegional || seen.has(`${country}:${name}`)) continue;
-        selected.push({ ...city, isMajor: true });
+        selected.push({ ...city, isMajor: true, majorPriority: priority });
         seen.add(`${country}:${name}`);
       }
 
@@ -1087,7 +1152,26 @@
         }
       }
 
-      return selected;
+      return balanceMajorCities(selected);
+    }
+
+    function balanceMajorCities(cities) {
+      const regionCounts = new Map();
+      const countryCounts = new Map();
+
+      return cities
+        .sort((a, b) => (a.majorPriority ?? 999) - (b.majorPriority ?? 999))
+        .filter(city => {
+          const region = countryRegions[city.country] || "Other";
+          const regionCount = regionCounts.get(region) || 0;
+          const countryCount = countryCounts.get(city.country) || 0;
+          if (regionCount >= (regionQuotas[region] || regionQuotas.Other)) return false;
+          if (countryCount >= (countryQuotas[region] || countryQuotas.Other)) return false;
+          regionCounts.set(region, regionCount + 1);
+          countryCounts.set(city.country, countryCount + 1);
+          return true;
+        })
+        .slice(0, PERF.majorCityLimit);
     }
 
     function renderLayers() {
@@ -1360,154 +1444,4 @@
         acc.lng += pair[0];
         acc.lat += pair[1];
         return acc;
-      }, { lat: 0, lng: 0 });
-      const count = Math.max(coords.length, 1);
-      return { lat: totals.lat / count, lng: totals.lng / count };
-    }
-
-    function collectCoordinates(value, output) {
-      if (!Array.isArray(value)) return;
-      if (typeof value[0] === "number" && typeof value[1] === "number") {
-        output.push(value);
-        return;
-      }
-      value.forEach(item => collectCoordinates(item, output));
-    }
-
-    function hasValidCoordinates(value) {
-      if (!Array.isArray(value)) return false;
-      if (typeof value[0] === "number" && typeof value[1] === "number") {
-        return Number.isFinite(value[0]) && Number.isFinite(value[1]);
-      }
-      return value.some(item => hasValidCoordinates(item));
-    }
-
-    function validCity(city) {
-      return city && city.name && Number.isFinite(city.lat) && Number.isFinite(city.lng) && Math.abs(city.lat) <= 90 && Math.abs(city.lng) <= 180;
-    }
-
-    function applyLanguage() {
-      document.documentElement.lang = t().htmlLang;
-      document.title = t().title;
-      searchEl.placeholder = t().search;
-      document.getElementById("language").textContent = state.language === "pl" ? "EN" : "PL";
-      document.getElementById("citiesLabel").textContent = t().cities;
-      document.getElementById("citiesCount").textContent = state.cities.length ? formatNumber(state.cities.length) : "...";
-      document.getElementById("labelsToggleText").textContent = state.labelsEnabled ? t().labelsOn : t().labelsOff;
-      document.getElementById("rotationToggleText").textContent = globe.controls().autoRotate ? t().rotationOn : t().rotationOff;
-      document.getElementById("antipodeHint").textContent = t().antipodeHint;
-    }
-
-    function countryLabel(feature) {
-      return `<b>${escapeHtml(countryName(feature))}</b><small>${escapeHtml(t().countryMeta)}</small>`;
-    }
-
-    function cityLabel(city) {
-      const pop = city.population ? `<small>${t().cityPopulation}: ${formatNumber(Math.round(city.population))}</small>` : "";
-      return `<b>${escapeHtml(displayCityName(city))}</b><small>${escapeHtml(city.country || "")}</small>${pop}`;
-    }
-
-    function countryName(feature) {
-      const props = feature.properties || {};
-      return props.name || props.NAME || props.ADMIN || props.NAME_LONG || `ID ${props.id || feature.id || ""}`.trim();
-    }
-
-    function searchableCityText(city) {
-      return withPolishAliases(`${city.name} ${displayCityName(city)} ${polishCityName(city) || ""} ${city.asciiName || ""} ${city.aliases || ""} ${city.country}`);
-    }
-
-    function displayCityName(city) {
-      const country = normalize(city.country);
-      const name = normalize(city.name);
-      const ascii = normalize(city.asciiName || city.name);
-      if (state.language === "pl") {
-        const polishName = polishCityNames[`${country}:${name}`] || polishCityNames[`${country}:${ascii}`];
-        if (polishName) return polishName;
-      }
-      return cityNameCorrections[`${country}:${name}`] ||
-        cityNameCorrections[`${country}:${ascii}`] ||
-        city.name;
-    }
-
-    function polishCityName(city) {
-      const country = normalize(city.country);
-      const name = normalize(city.name);
-      const ascii = normalize(city.asciiName || city.name);
-      return polishCityNames[`${country}:${name}`] || polishCityNames[`${country}:${ascii}`] || "";
-    }
-
-    function searchableCountryText(country) {
-      return withPolishAliases(countryName(country));
-    }
-
-    function withPolishAliases(value) {
-      const normalized = normalize(value);
-      const aliases = Object.entries(polishAliases)
-        .filter(([english]) => normalized.includes(english))
-        .map(([, polish]) => polish)
-        .join(" ");
-      return `${normalized} ${aliases}`;
-    }
-
-    function setTooltip(html, event) {
-      if (!html) {
-        tooltipEl.classList.remove("is-visible");
-        return;
-      }
-      tooltipEl.innerHTML = html;
-      tooltipEl.style.left = `${(event && event.clientX) || window.innerWidth / 2}px`;
-      tooltipEl.style.top = `${(event && event.clientY) || window.innerHeight / 2}px`;
-      tooltipEl.classList.add("is-visible");
-    }
-
-    function setStatus(message) {
-      statusEl.textContent = message;
-    }
-
-    function currentAltitude() {
-      const pov = globe.pointOfView();
-      return pov && Number.isFinite(pov.altitude) ? pov.altitude : 2.25;
-    }
-
-    function formatNumber(value) {
-      return Number(value).toLocaleString(state.language === "pl" ? "pl-PL" : "en-US");
-    }
-
-    function formatDistance(value) {
-      return `${formatNumber(Math.round(value))} km`;
-    }
-
-    function formatCoords(lat, lng) {
-      return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
-    }
-
-    function normalize(value) {
-      return String(value || "")
-        .toLocaleLowerCase("pl-PL")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-    }
-
-    function normalizeLng(lng) {
-      return ((((lng + 180) % 360) + 360) % 360) - 180;
-    }
-
-    function toRad(value) {
-      return value * Math.PI / 180;
-    }
-
-    function t() {
-      return text[state.language];
-    }
-
-    function escapeHtml(value) {
-      return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-  </script>
-</body>
-</html>
+      }, { lat: 0, lng:

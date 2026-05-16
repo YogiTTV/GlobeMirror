@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Minimalistyczny glob</title>
+  <title>Mirror Globe</title>
   <style>
     :root {
       color-scheme: light;
@@ -385,7 +385,7 @@
     const text = {
       pl: {
         htmlLang: "pl",
-        title: "Minimalistyczny glob",
+        title: "Mirror Globe",
         search: "Szukaj miasta lub państwa...",
         cities: "miast",
         labelsOn: "Nazwy: auto",
@@ -839,10 +839,10 @@
       .showAtmosphere(true)
       .atmosphereColor("#d8d8d5")
       .atmosphereAltitude(0.08)
-      .polygonAltitude(0.004)
-      .polygonCapColor(() => "rgba(142,142,142,0.82)")
-      .polygonSideColor(() => "rgba(125,125,125,0.5)")
-      .polygonStrokeColor(() => "rgba(248,248,246,0.58)")
+      .polygonAltitude(0.012)
+      .polygonCapColor(() => "rgba(86,86,86,0.82)")
+      .polygonSideColor(() => "rgba(74,74,74,0.32)")
+      .polygonStrokeColor(() => "rgba(248,248,246,0.5)")
       .polygonLabel(feature => countryLabel(feature))
       .onPolygonHover(feature => setTooltip(feature ? countryLabel(feature) : "", window.event))
       .onPolygonClick((feature, event, coords) => {
@@ -1444,4 +1444,154 @@
         acc.lng += pair[0];
         acc.lat += pair[1];
         return acc;
-      }, { lat: 0, lng:
+      }, { lat: 0, lng: 0 });
+      const count = Math.max(coords.length, 1);
+      return { lat: totals.lat / count, lng: totals.lng / count };
+    }
+
+    function collectCoordinates(value, output) {
+      if (!Array.isArray(value)) return;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        output.push(value);
+        return;
+      }
+      value.forEach(item => collectCoordinates(item, output));
+    }
+
+    function hasValidCoordinates(value) {
+      if (!Array.isArray(value)) return false;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        return Number.isFinite(value[0]) && Number.isFinite(value[1]);
+      }
+      return value.some(item => hasValidCoordinates(item));
+    }
+
+    function validCity(city) {
+      return city && city.name && Number.isFinite(city.lat) && Number.isFinite(city.lng) && Math.abs(city.lat) <= 90 && Math.abs(city.lng) <= 180;
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = t().htmlLang;
+      document.title = t().title;
+      searchEl.placeholder = t().search;
+      document.getElementById("language").textContent = state.language === "pl" ? "EN" : "PL";
+      document.getElementById("citiesLabel").textContent = t().cities;
+      document.getElementById("citiesCount").textContent = state.cities.length ? formatNumber(state.cities.length) : "...";
+      document.getElementById("labelsToggleText").textContent = state.labelsEnabled ? t().labelsOn : t().labelsOff;
+      document.getElementById("rotationToggleText").textContent = globe.controls().autoRotate ? t().rotationOn : t().rotationOff;
+      document.getElementById("antipodeHint").textContent = t().antipodeHint;
+    }
+
+    function countryLabel(feature) {
+      return `<b>${escapeHtml(countryName(feature))}</b><small>${escapeHtml(t().countryMeta)}</small>`;
+    }
+
+    function cityLabel(city) {
+      const pop = city.population ? `<small>${t().cityPopulation}: ${formatNumber(Math.round(city.population))}</small>` : "";
+      return `<b>${escapeHtml(displayCityName(city))}</b><small>${escapeHtml(city.country || "")}</small>${pop}`;
+    }
+
+    function countryName(feature) {
+      const props = feature.properties || {};
+      return props.name || props.NAME || props.ADMIN || props.NAME_LONG || `ID ${props.id || feature.id || ""}`.trim();
+    }
+
+    function searchableCityText(city) {
+      return withPolishAliases(`${city.name} ${displayCityName(city)} ${polishCityName(city) || ""} ${city.asciiName || ""} ${city.aliases || ""} ${city.country}`);
+    }
+
+    function displayCityName(city) {
+      const country = normalize(city.country);
+      const name = normalize(city.name);
+      const ascii = normalize(city.asciiName || city.name);
+      if (state.language === "pl") {
+        const polishName = polishCityNames[`${country}:${name}`] || polishCityNames[`${country}:${ascii}`];
+        if (polishName) return polishName;
+      }
+      return cityNameCorrections[`${country}:${name}`] ||
+        cityNameCorrections[`${country}:${ascii}`] ||
+        city.name;
+    }
+
+    function polishCityName(city) {
+      const country = normalize(city.country);
+      const name = normalize(city.name);
+      const ascii = normalize(city.asciiName || city.name);
+      return polishCityNames[`${country}:${name}`] || polishCityNames[`${country}:${ascii}`] || "";
+    }
+
+    function searchableCountryText(country) {
+      return withPolishAliases(countryName(country));
+    }
+
+    function withPolishAliases(value) {
+      const normalized = normalize(value);
+      const aliases = Object.entries(polishAliases)
+        .filter(([english]) => normalized.includes(english))
+        .map(([, polish]) => polish)
+        .join(" ");
+      return `${normalized} ${aliases}`;
+    }
+
+    function setTooltip(html, event) {
+      if (!html) {
+        tooltipEl.classList.remove("is-visible");
+        return;
+      }
+      tooltipEl.innerHTML = html;
+      tooltipEl.style.left = `${(event && event.clientX) || window.innerWidth / 2}px`;
+      tooltipEl.style.top = `${(event && event.clientY) || window.innerHeight / 2}px`;
+      tooltipEl.classList.add("is-visible");
+    }
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function currentAltitude() {
+      const pov = globe.pointOfView();
+      return pov && Number.isFinite(pov.altitude) ? pov.altitude : 2.25;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString(state.language === "pl" ? "pl-PL" : "en-US");
+    }
+
+    function formatDistance(value) {
+      return `${formatNumber(Math.round(value))} km`;
+    }
+
+    function formatCoords(lat, lng) {
+      return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+    }
+
+    function normalize(value) {
+      return String(value || "")
+        .toLocaleLowerCase("pl-PL")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function normalizeLng(lng) {
+      return ((((lng + 180) % 360) + 360) % 360) - 180;
+    }
+
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
+
+    function t() {
+      return text[state.language];
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
